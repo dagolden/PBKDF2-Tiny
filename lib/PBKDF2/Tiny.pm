@@ -5,29 +5,38 @@ package PBKDF2::Tiny;
 # ABSTRACT: Minimalist PBKDF2 (RFC 2898) with HMAC-SHA1 or HMAC-SHA2
 # VERSION
 
-use Carp   ();
-use Digest ();
+use Carp ();
 use Exporter 5.57 qw/import/;
 
 our @EXPORT_OK = qw/derive derive_hex verify verify_hex/;
+
+my ( $BACKEND, $LOAD_ERR );
+for my $mod (qw/Digest::SHA Digest::SHA::PurePerl/) {
+    $BACKEND = $mod, last if eval "require $mod; 1";
+    $LOAD_ERR ||= $@;
+}
+die $LOAD_ERR if !$BACKEND;
 
 #--------------------------------------------------------------------------#
 # constants and lookup tables
 #--------------------------------------------------------------------------#
 
-my %BLOCK_SIZE_BITS = (
-    'SHA-1'   => 512,
-    'SHA-224' => 512,
-    'SHA-256' => 512,
-    'SHA-384' => 1024,
-    'SHA-512' => 1024,
+# function coderef placeholder, block size in bytes, digest size in bytes
+my %DIGEST_TYPES = (
+    'SHA-1'   => [ undef, 64,  20 ],
+    'SHA-224' => [ undef, 64,  28 ],
+    'SHA-256' => [ undef, 64,  32 ],
+    'SHA-384' => [ undef, 128, 48 ],
+    'SHA-512' => [ undef, 128, 64 ],
 );
 
-my %BLOCK_SIZE = map { $_ => $BLOCK_SIZE_BITS{$_} / 8 } keys %BLOCK_SIZE_BITS;
+for my $type ( keys %DIGEST_TYPES ) {
+    no strict 'refs';
+    ( my $name = lc $type ) =~ s{-}{};
+    $DIGEST_TYPES{$type}[0] = \&{"$BACKEND\::$name"};
+}
 
 my %INT = map { $_ => pack( "N", $_ ) } 1 .. 16;
-
-my ( %HASHERS, %HASH_LENGTH );
 
 #--------------------------------------------------------------------------#
 # public functions
@@ -38,8 +47,8 @@ my ( %HASHERS, %HASH_LENGTH );
     $dk = derive( $type, $password, $salt, $iterations, $dk_length )
 
 The C<derive> function outputs a binary string with the derived key.
-The first argument indicates the hash function to use.  It must be one
-of: SHA-1, SHA-226, SHA-256, SHA-384, or SHA-512.
+The first argument indicates the digest function to use.  It must be one
+of: SHA-1, SHA-224, SHA-256, SHA-384, or SHA-512.
 
 If a password or salt are not provided, they default to the empty string, so
 don't do that!  L<RFC 2898
@@ -48,7 +57,7 @@ least 8 octets.  If you need a cryptographically strong salt, consider
 L<Crypt::URandom>.
 
 The number of iterations defaults to 1000 if not provided.  If the derived
-key length is not provided, it defaults to the output size of the hash
+key length is not provided, it defaults to the output size of the digest
 function.
 
 =cut
@@ -56,24 +65,25 @@ function.
 sub derive {
     my ( $type, $passwd, $salt, $iterations, $dk_length ) = @_;
 
-    my ( $hasher, $block_size, $hash_length ) = hash_fcn($type);
+    my ( $digester, $block_size, $digest_length ) = digest_fcn($type);
 
     $passwd = '' unless defined $passwd;
     $salt   = '' unless defined $salt;
     $iterations ||= 1000;
-    $dk_length  ||= $hash_length;
+    $dk_length  ||= $digest_length;
 
-    my $key = ( length($passwd) > $block_size ) ? $hasher->($passwd) : $passwd;
-    my $passes = int( $dk_length / $hash_length );
-    $passes++ if $dk_length % $hash_length; # need part of an extra pass
+    my $key = ( length($passwd) > $block_size ) ? $digester->($passwd) : $passwd;
+    my $passes = int( $dk_length / $digest_length );
+    $passes++ if $dk_length % $digest_length; # need part of an extra pass
 
     my $dk = "";
     for my $i ( 1 .. $passes ) {
         $INT{$i} ||= pack( "N", $i );
-        my $hash = my $result = "" . hmac( $salt . $INT{$i}, $key, $hasher, $block_size );
+        my $digest = my $result =
+          "" . hmac( $salt . $INT{$i}, $key, $digester, $block_size );
         for my $iter ( 2 .. $iterations ) {
-            $hash = hmac( $hash, $key, $hasher, $block_size );
-            $result ^= $hash;
+            $digest = hmac( $digest, $key, $digester, $block_size );
+            $result ^= $digest;
         }
         $dk .= $result;
     }
@@ -134,40 +144,33 @@ sub verify_hex {
     return verify( $dk, @_ );
 }
 
-=func hash_fcn
+=func digest_fcn
 
-    ($fcn, $blk_size, $hash_length) = hash_fcn('SHA-1');
+    ($fcn, $block_size, $digest_length) = digest_fcn('SHA-1');
     $digest = $fcn->($data);
 
 This function is used internally by PBKDF2::Tiny, but made available in case
 it's useful to someone.
 
-Given one of the valid digest types, it returns a coderef that hashes a string
-of data.  It also returns block size and hash length for that digest type.
+Given one of the valid digest types, it returns a function reference that
+digests a string of data. It also returns block size and digest length for that
+digest type.
 
 =cut
 
-sub hash_fcn {
+sub digest_fcn {
     my ($type) = @_;
 
-    unless ( $BLOCK_SIZE{$type} ) {
-        Carp::croak("Hash function '$type' not supported");
-    }
-    unless ( eval { Digest->new($type) } ) {
-        ( my $err = $@ ) =~ s{ at \S+ line \d+.*}{};
-        Carp::croak("Hash function '$type' not available: $err");
-    }
+    Carp::croak("Digest function '$type' not supported")
+      unless exists $DIGEST_TYPES{$type};
 
-    $HASHERS{$type} ||= sub { Digest->new($type)->add(@_)->digest };
-    $HASH_LENGTH{$type} ||= length( $HASHERS{$type}->("0") );
-
-    return ( $HASHERS{$type}, $BLOCK_SIZE{$type}, $HASH_LENGTH{$type} );
+    return @{ $DIGEST_TYPES{$type} };
 }
 
 =func hmac
 
-    $key = $hash_fcn->($key) if length($key) > $block_sizes;
-    $hmac = hmac( $data, $key, $hash_fcn, $block_size );
+    $key = $digest_fcn->($key) if length($key) > $block_sizes;
+    $hmac = hmac( $data, $key, $digest_fcn, $block_size );
 
 This function is used internally by PBKDF2::Tiny, but made available in case
 it's useful to someone.
@@ -176,8 +179,8 @@ The first two arguments are the data and key inputs to the HMAC function.
 B<Note>: if the key is longer than the digest block size, it must be
 preprocessed using the digesting function.
 
-The third and fourth arguments must be a digesting code reference (from L</hash_fcn>)
-and block size.
+The third and fourth arguments must be a digesting code reference (from
+L</digest_fcn>) and block size.
 
 =cut
 
@@ -185,12 +188,12 @@ and block size.
 # Compared to that implementation, this *requires* a preprocessed
 # key and block size, which makes iterative hmac slightly more efficient.
 sub hmac {
-    my ( $data, $key, $hash_func, $block_size ) = @_;
+    my ( $data, $key, $digest_func, $block_size ) = @_;
 
     my $k_ipad = $key ^ ( chr(0x36) x $block_size );
     my $k_opad = $key ^ ( chr(0x5c) x $block_size );
 
-    &$hash_func( $k_opad, &$hash_func( $k_ipad, $data ) );
+    &$digest_func( $k_opad, &$digest_func( $k_ipad, $data ) );
 }
 
 1;
@@ -211,7 +214,9 @@ sub hmac {
 
 This module provides an L<RFC 2898|https://tools.ietf.org/html/rfc2898>
 compliant PBKDF2 implementation using HMAC-SHA1 or HMAC-SHA2 in under 100 lines
-of code using only core Perl modules.
+of code.  If you are using Perl 5.10 or later, it uses only core Perl modules.
+If you are on an earlier version of Perl, you need L<Digest::SHA> or
+L<Digest::SHA::PurePerl>.
 
 =head1 SEE ALSO
 

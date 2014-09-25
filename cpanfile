@@ -1,5 +1,4 @@
 requires "Carp" => "0";
-requires "Digest" => "0";
 requires "Exporter" => "5.57";
 requires "perl" => "5.006";
 requires "strict" => "0";
@@ -16,11 +15,15 @@ on 'test' => sub {
 };
 
 on 'configure' => sub {
+  requires "Config" => "0";
   requires "ExtUtils::MakeMaker" => "6.17";
+  requires "File::Spec" => "0";
+  requires "Text::ParseWords" => "0";
 };
 
 on 'develop' => sub {
   requires "Dist::Zilla" => "5";
+  requires "Dist::Zilla::Plugin::RemovePrereqs" => "0";
   requires "Dist::Zilla::PluginBundle::DAGOLDEN" => "0.068";
   requires "File::Spec" => "0";
   requires "File::Temp" => "0";

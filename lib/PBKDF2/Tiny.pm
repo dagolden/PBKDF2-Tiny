@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package PBKDF2::Tiny;
-# ABSTRACT: Minimalist PBKDF2 (RFC 2898) with HMAC and choice of digest function
+# ABSTRACT: Minimalist PBKDF2 (RFC 2898) with HMAC-SHA-1 or HMAC-SHA-2
 # VERSION
 
 use Carp   ();
@@ -16,7 +16,6 @@ our @EXPORT_OK = qw/derive derive_hex verify verify_hex/;
 #--------------------------------------------------------------------------#
 
 my %BLOCK_SIZE_BITS = (
-    'MD5'     => 512,
     'SHA-1'   => 512,
     'SHA-224' => 512,
     'SHA-256' => 512,
@@ -37,9 +36,7 @@ my ( %HASHERS, %HASH_LENGTH );
 sub derive {
     my ( $type, $passwd, $salt, $iterations, $dk_length ) = @_;
 
-    my $hasher      = $HASHERS{$type} || _init_hasher_fcn($type);
-    my $block_size  = $BLOCK_SIZE{$type};
-    my $hash_length = $HASH_LENGTH{$type};
+    my ( $hasher, $block_size, $hash_length ) = hash_fcn($type);
 
     $passwd = '' unless defined $passwd;
     $salt   = '' unless defined $salt;
@@ -53,9 +50,9 @@ sub derive {
     my $dk = "";
     for my $i ( 1 .. $passes ) {
         $INT{$i} ||= pack( "N", $i );
-        my $hash = my $result = "" . _hmac( $salt . $INT{$i}, $key, $hasher, $block_size );
+        my $hash = my $result = "" . hmac( $salt . $INT{$i}, $key, $hasher, $block_size );
         for my $iter ( 2 .. $iterations ) {
-            $hash = _hmac( $hash, $key, $hasher, $block_size );
+            $hash = hmac( $hash, $key, $hasher, $block_size );
             $result ^= $hash;
         }
         $dk .= $result;
@@ -92,22 +89,9 @@ sub verify_hex {
     return verify( $type, $dk1, $password, $salt, $iterations, $dk_length );
 }
 
-#--------------------------------------------------------------------------#
-# private functions
-#--------------------------------------------------------------------------#
-
-# _hmac function adapted from Digest::HMAC by Graham Barr and Gisle Aas
-sub _hmac {
-    my ( $data, $key, $hash_func, $block_size ) = @_;
-
-    my $k_ipad = $key ^ ( chr(0x36) x $block_size );
-    my $k_opad = $key ^ ( chr(0x5c) x $block_size );
-
-    &$hash_func( $k_opad, &$hash_func( $k_ipad, $data ) );
-}
-
-sub _init_hasher_fcn {
+sub hash_fcn {
     my ($type) = @_;
+
     unless ( $BLOCK_SIZE{$type} ) {
         Carp::croak("Hash function '$type' not supported");
     }
@@ -115,9 +99,21 @@ sub _init_hasher_fcn {
         ( my $err = $@ ) =~ s{ at \S+ line \d+.*}{};
         Carp::croak("Hash function '$type' not available: $err");
     }
-    my $hasher = $HASHERS{$type} = sub { Digest->new($type)->add(@_)->digest };
-    $HASH_LENGTH{$type} = length( $hasher->("0") );
-    return $hasher;
+
+    $HASHERS{$type} ||= sub { Digest->new($type)->add(@_)->digest };
+    $HASH_LENGTH{$type} ||= length( $HASHERS{$type}->("0") );
+
+    return ( $HASHERS{$type}, $BLOCK_SIZE{$type}, $HASH_LENGTH{$type} );
+}
+
+# hmac function adapted from Digest::HMAC by Graham Barr and Gisle Aas
+sub hmac {
+    my ( $data, $key, $hash_func, $block_size ) = @_;
+
+    my $k_ipad = $key ^ ( chr(0x36) x $block_size );
+    my $k_opad = $key ^ ( chr(0x5c) x $block_size );
+
+    &$hash_func( $k_opad, &$hash_func( $k_ipad, $data ) );
 }
 
 1;

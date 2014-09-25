@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 package PBKDF2::Tiny;
-# ABSTRACT: Minimalist PBKDF2 (RFC 2898) with HMAC-SHA-1 or HMAC-SHA-2
+# ABSTRACT: Minimalist PBKDF2 (RFC 2898) with HMAC-SHA1 or HMAC-SHA2
 # VERSION
 
 use Carp   ();
@@ -33,6 +33,26 @@ my ( %HASHERS, %HASH_LENGTH );
 # public functions
 #--------------------------------------------------------------------------#
 
+=func derive
+
+    $dk = derive( $type, $password, $salt, $iterations, $dk_length )
+
+The C<derive> function outputs a binary string with the derived key.
+The first argument indicates the hash function to use.  It must be one
+of: SHA-1, SHA-226, SHA-256, SHA-384, or SHA-512.
+
+If a password or salt are not provided, they default to the empty string, so
+don't do that!  L<RFC 2898
+recommends|https://tools.ietf.org/html/rfc2898#section-4.1> a random salt of at
+least 8 octets.  If you need a cryptographically strong salt, consider
+L<Crypt::URandom>.
+
+The number of iterations defaults to 1000 if not provided.  If the derived
+key length is not provided, it defaults to the output size of the hash
+function.
+
+=cut
+
 sub derive {
     my ( $type, $passwd, $salt, $iterations, $dk_length ) = @_;
 
@@ -61,7 +81,26 @@ sub derive {
     return substr( $dk, 0, $dk_length );
 }
 
+=func derive_hex
+
+Works just like L</derive> but outputs a hex string.
+
+=cut
+
 sub derive_hex { unpack( "H*", &derive ) }
+
+=func verify
+
+    $bool = verify( $dk, $type, $password, $salt, $iterations, $dk_length );
+
+The C<verify> function checks that a given derived key (in binary form) matches
+the password and other parameters provided using a constant-time comparison
+function.
+
+The first parameter is the derived key to check.  The remaining parameters
+are the same as for L</derive>.
+
+=cut
 
 sub verify {
     my ( $dk1, $type, $password, $salt, $iterations, $dk_length ) = @_;
@@ -83,10 +122,30 @@ sub verify {
     return $match;
 }
 
+=func verify_hex
+
+Works just like L</verify> but the derived key must be a hex string (without a
+leading "0x").
+
+=cut
+
 sub verify_hex {
     my $dk = pack( "H*", shift );
     return verify( $dk, @_ );
 }
+
+=func hash_fcn
+
+    ($fcn, $blk_size, $hash_length) = hash_fcn('SHA-1');
+    $digest = $fcn->($data);
+
+This function is used internally by PBKDF2::Tiny, but made available in case
+it's useful to someone.
+
+Given one of the valid digest types, it returns a coderef that hashes a string
+of data.  It also returns block size and hash length for that digest type.
+
+=cut
 
 sub hash_fcn {
     my ($type) = @_;
@@ -105,7 +164,26 @@ sub hash_fcn {
     return ( $HASHERS{$type}, $BLOCK_SIZE{$type}, $HASH_LENGTH{$type} );
 }
 
-# hmac function adapted from Digest::HMAC by Graham Barr and Gisle Aas
+=func hmac
+
+    $key = $hash_fcn->($key) if length($key) > $block_sizes;
+    $hmac = hmac( $data, $key, $hash_fcn, $block_size );
+
+This function is used internally by PBKDF2::Tiny, but made available in case
+it's useful to someone.
+
+The first two arguments are the data and key inputs to the HMAC function.
+B<Note>: if the key is longer than the digest block size, it must be
+preprocessed using the digesting function.
+
+The third and fourth arguments must be a digesting code reference (from L</hash_fcn>)
+and block size.
+
+=cut
+
+# hmac function adapted from Digest::HMAC by Graham Barr and Gisle Aas.
+# Compared to that implementation, this *requires* a preprocessed
+# key and block size, which makes iterative hmac slightly more efficient.
 sub hmac {
     my ( $data, $key, $hash_func, $block_size ) = @_;
 
@@ -117,7 +195,7 @@ sub hmac {
 
 1;
 
-=for Pod::Coverage BUILD
+=for Pod::Coverage
 
 =head1 SYNOPSIS
 
@@ -125,14 +203,15 @@ sub hmac {
 
     my $dk = derive( 'SHA-1', $pass, $salt, $iters );
 
-    if ( verify( 'SHA-1', $dk, $pass, $salt, $iters ) ) {
+    if ( verify( $dk, 'SHA-1', $pass, $salt, $iters ) ) {
         # password is correct
     }
 
 =head1 DESCRIPTION
 
-This module provides an RFC 2898 compliant PBKDF2 implmentation using HMAC and
-several possible digest functions in under 100 lines of code.
+This module provides an L<RFC 2898|https://tools.ietf.org/html/rfc2898>
+compliant PBKDF2 implementation using HMAC-SHA1 or HMAC-SHA2 in under 100 lines
+of code using only core Perl modules.
 
 =head1 SEE ALSO
 

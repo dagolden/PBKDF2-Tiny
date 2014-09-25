@@ -1,6 +1,7 @@
 language: perl
 script: prove -lr t
 install:
+  - cpanm -n -q --skip-satisfied Digest::SHA
   - cpanm -n -q --skip-satisfied --installdeps .
 perl:
   - "5.21"

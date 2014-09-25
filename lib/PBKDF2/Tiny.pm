@@ -64,7 +64,7 @@ sub derive {
 sub derive_hex { unpack( "H*", &derive ) }
 
 sub verify {
-    my ( $type, $dk1, $password, $salt, $iterations, $dk_length ) = @_;
+    my ( $dk1, $type, $password, $salt, $iterations, $dk_length ) = @_;
 
     my $dk2 = derive( $type, $password, $salt, $iterations, $dk_length );
 
@@ -84,9 +84,8 @@ sub verify {
 }
 
 sub verify_hex {
-    my ( $type, $dk1, $password, $salt, $iterations, $dk_length ) = @_;
-    $dk1 = pack( "H*", $dk1 );
-    return verify( $type, $dk1, $password, $salt, $iterations, $dk_length );
+    my $dk = pack( "H*", shift );
+    return verify( $dk, @_ );
 }
 
 sub hash_fcn {

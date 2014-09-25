@@ -172,8 +172,8 @@ for my $c (@cases) {
     my $got_hex = derive_hex( @{$c}{qw/a p s c l/} );
     is( $got_hex, $exp_hex, "$c->{n} (derive hex)" );
 
-    ok( verify( $c->{a}, $exp, @{$c}{qw/p s c l/} ), "$c->{n} (verify)" );
-    ok( verify_hex( $c->{a}, $exp_hex, @{$c}{qw/p s c l/} ), "$c->{n} (verify hex)" );
+    ok( verify( $exp, @{$c}{qw/a p s c l/} ), "$c->{n} (verify)" );
+    ok( verify_hex( $exp_hex, @{$c}{qw/a p s c l/} ), "$c->{n} (verify hex)" );
 }
 
 done_testing;

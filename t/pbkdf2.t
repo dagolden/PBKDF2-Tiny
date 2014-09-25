@@ -1,9 +1,6 @@
 use strict;
 use warnings;
 use Test::More 0.88;
-use Test::FailWarnings;
-binmode( Test::More->builder->$_, ":utf8" )
-  for qw/output failure_output todo_output/;
 
 use PBKDF2::Tiny qw/derive derive_hex verify verify_hex/;
 

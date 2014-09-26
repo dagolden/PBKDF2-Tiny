@@ -60,10 +60,10 @@ delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
 
 if ( $] < 5.010 ) {
     if ( !parse_args()->{PUREPERL_ONLY} && can_cc() ) {
-        $WriteMakefileArgs{PREREQ_PM}{'Devel::SHA'} = 0;
+        $WriteMakefileArgs{PREREQ_PM}{'Digest::SHA'} = 0;
     }
     else {
-        $WriteMakefileArgs{PREREQ_PM}{'Devel::SHA::PurePerl'} = 0;
+        $WriteMakefileArgs{PREREQ_PM}{'Digest::SHA::PurePerl'} = 0;
     }
 }
 

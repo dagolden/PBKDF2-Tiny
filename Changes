@@ -2,7 +2,10 @@ Revision history for PBKDF2-Tiny
 
 {{$NEXT}}
 
+    [FIXED]
+
+    - Fixed dependencies in Makefile.PL for Perl 5.8 and earlier
+
 0.001     2014-09-26 16:21:44-04:00 America/New_York
 
     - First release
-

@@ -4,7 +4,7 @@ use warnings;
 package PBKDF2::Tiny;
 # ABSTRACT: Minimalist PBKDF2 (RFC 2898) with HMAC-SHA1 or HMAC-SHA2
 
-our $VERSION = '0.001';
+our $VERSION = '0.002';
 
 use Carp ();
 use Exporter 5.57 qw/import/;

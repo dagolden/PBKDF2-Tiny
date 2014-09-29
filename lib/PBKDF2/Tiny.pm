@@ -9,7 +9,7 @@ our $VERSION = '0.003';
 use Carp ();
 use Exporter 5.57 qw/import/;
 
-our @EXPORT_OK = qw/derive derive_hex verify verify_hex/;
+our @EXPORT_OK = qw/derive derive_hex verify verify_hex hmac digest_fcn/;
 
 my ( $BACKEND, $LOAD_ERR );
 for my $mod (qw/Digest::SHA Digest::SHA::PurePerl/) {
@@ -218,6 +218,8 @@ compliant PBKDF2 implementation using HMAC-SHA1 or HMAC-SHA2 in under 100 lines
 of code.  If you are using Perl 5.10 or later, it uses only core Perl modules.
 If you are on an earlier version of Perl, you need L<Digest::SHA> or
 L<Digest::SHA::PurePerl>.
+
+All documented functions are optionally exported.  No functions are exported by default.
 
 =head1 SEE ALSO
 

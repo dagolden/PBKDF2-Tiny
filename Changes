@@ -2,6 +2,11 @@ Revision history for PBKDF2-Tiny
 
 {{$NEXT}}
 
+    [FIXED]
+
+    - Added 'hmac' and 'digest_fcn' to @EXPORT_OK.  Also documented that
+      nothing is exported by default.
+
 0.002     2014-09-26 16:27:40-04:00 America/New_York
 
     [FIXED]

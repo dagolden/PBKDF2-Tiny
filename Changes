@@ -2,6 +2,10 @@ Revision history for PBKDF2-Tiny
 
 {{$NEXT}}
 
+    [DOCUMENTED]
+
+    - Fixed minor doc typo for 'hmac' function
+
 0.003     2014-09-29 10:21:45-04:00 America/New_York
 
     [FIXED]

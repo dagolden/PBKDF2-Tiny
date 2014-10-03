@@ -170,7 +170,7 @@ sub digest_fcn {
 
 =func hmac
 
-    $key = $digest_fcn->($key) if length($key) > $block_sizes;
+    $key = $digest_fcn->($key) if length($key) > $block_size;
     $hmac = hmac( $data, $key, $digest_fcn, $block_size );
 
 This function is used internally by PBKDF2::Tiny, but made available in case

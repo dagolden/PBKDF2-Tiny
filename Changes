@@ -2,6 +2,8 @@ Revision history for PBKDF2-Tiny
 
 {{$NEXT}}
 
+0.004     2014-10-06 11:18:07-04:00 America/New_York
+
     [CHANGED]
 
     - password and salt must be encoded as octets; if the internal UTF8

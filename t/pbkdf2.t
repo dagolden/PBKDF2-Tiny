@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 use Test::More 0.88;
-use Test::Fatal;
 
 use utf8;
 use PBKDF2::Tiny qw/derive derive_hex verify verify_hex/;
@@ -15,6 +14,12 @@ sub is_hex {
     my ( $got, $exp, $label ) = @_;
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     is( unpack( "H*", $got ), unpack( "H*", $exp ), $label );
+}
+
+sub exception(&) {
+    my $code = shift;
+    eval { $code->() };
+    return $@;
 }
 
 #--------------------------------------------------------------------------#
@@ -192,11 +197,11 @@ subtest "Unicode" => sub {
     );
 
     is( exception { derive( 'SHA-1', encode_utf8($latin1), 'salt', 1000 ) },
-        undef, "password: UTF-8 encoded latin-1 is OK" );
+        '', "password: UTF-8 encoded latin-1 is OK" );
 
     utf8::downgrade($latin1);
     is( exception { derive( 'SHA-1', $latin1, 'salt', 1000 ) },
-        undef, "password: UTF8-off latin-1 is OK" );
+        '', "password: UTF8-off latin-1 is OK" );
 
     like(
         exception { derive( 'SHA-1', $wide, 'salt', 1000 ) },
@@ -205,7 +210,7 @@ subtest "Unicode" => sub {
     );
 
     is( exception { derive( 'SHA-1', encode_utf8($wide), 'salt', 1000 ) },
-        undef, "password: UTF-8 encoded wide is OK" );
+        '', "password: UTF-8 encoded wide is OK" );
 
     # salt
 
@@ -218,11 +223,11 @@ subtest "Unicode" => sub {
     );
 
     is( exception { derive( 'SHA-1', 'pass', encode_utf8($latin1), 1000 ) },
-        undef, "salt: UTF-8 encoded latin-1 is OK" );
+        '', "salt: UTF-8 encoded latin-1 is OK" );
 
     utf8::downgrade($latin1);
     is( exception { derive( 'SHA-1', 'pass', $latin1, 1000 ) },
-        undef, "salt: UTF8-off latin-1 is OK" );
+        '', "salt: UTF8-off latin-1 is OK" );
 
     my $wide = "☺♥☺•♥♥☺";
     like(
@@ -232,7 +237,7 @@ subtest "Unicode" => sub {
     );
 
     is( exception { derive( 'SHA-1', 'pass', encode_utf8($wide), 1000 ) },
-        undef, "salt: UTF-8 encoded wide is OK" );
+        '', "salt: UTF-8 encoded wide is OK" );
 
 };
 

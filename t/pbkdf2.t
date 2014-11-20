@@ -229,7 +229,7 @@ subtest "Unicode" => sub {
     is( exception { derive( 'SHA-1', 'pass', $latin1, 1000 ) },
         '', "salt: UTF8-off latin-1 is OK" );
 
-    my $wide = "☺♥☺•♥♥☺";
+    $wide = "☺♥☺•♥♥☺";
     like(
         exception { derive( 'SHA-1', 'pass', $wide, 1000 ) },
         qr/salt must be an octet string/,

@@ -180,6 +180,11 @@ subtest "Test cases" => sub {
 
         ok( verify( $exp, @{$c}{qw/a p s c l/} ), "$c->{n} (verify)" );
         ok( verify_hex( $exp_hex, @{$c}{qw/a p s c l/} ), "$c->{n} (verify hex)" );
+
+        ok( !verify( $exp, $c->{a}, 'qwerty', @{$c}{qw/s c l/} ),
+            "$c->{n} (verify bad pass)" );
+        ok( !verify_hex( $exp_hex, $c->{a}, 'qwerty', @{$c}{qw/s c l/} ),
+            "$c->{n} (verify hex bad pas)" );
     }
 };
 
@@ -239,6 +244,25 @@ subtest "Unicode" => sub {
     is( exception { derive( 'SHA-1', 'pass', encode_utf8($wide), 1000 ) },
         '', "salt: UTF-8 encoded wide is OK" );
 
+};
+
+subtest "missing dk length" => sub {
+    my @gdargs = ( 'SHA-1', 'pass',       'salt', 1000 );
+    my @bdargs = ( 'SHA-1', 'notthepass', 'salt', 1000 );
+    my $key1   = derive_hex(@gdargs);
+    my $key2 = derive_hex( @gdargs, 0 );
+
+    is( $key1, $key2, "0 as dk length ignored" );
+    ok( !verify_hex( $key1, @gdargs, length($key1) ),
+        "verify w/length true (good pass)" );
+    ok( !verify_hex( $key1, @bdargs, length($key1) ),
+        "verify w/length false (bad pass)" );
+
+    ok( verify_hex( $key1, @gdargs ), "verify w/o length true (good pass)" );
+    ok( !verify_hex( $key1, @bdargs ), "verify w/o length false (bad pass)" );
+
+    ok( verify_hex( $key1, @gdargs, 0 ), "verify with 0 length true (good pass)" );
+    ok( !verify_hex( $key1, @bdargs, 0 ), "verify with 0 length false (bad pass)" );
 };
 
 done_testing;

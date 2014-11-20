@@ -123,9 +123,9 @@ are the same as for L</derive>.
 =cut
 
 sub verify {
-    my ( $dk1, $type, $password, $salt, $iterations, $dk_length ) = @_;
+    my ( $dk1, @derive_args ) = @_;
 
-    my $dk2 = derive( $type, $password, $salt, $iterations, $dk_length );
+    my $dk2 = derive(@derive_args);
 
     # shortcut if input dk is the wrong length entirely; this is not
     # constant time, but this doesn't really give much away as
@@ -135,8 +135,8 @@ sub verify {
 
     # if lengths match, do constant time comparison to avoid timing attacks
     my $match = 1;
-    for my $offset ( 0 .. $dk_length ) {
-        $match &= ( substr( $dk1, $offset, 1 ) eq substr( $dk2, $offset, 1 ) ) ? 1 : 0;
+    for my $i ( 0 .. length($dk1) - 1 ) {
+        $match &= ( substr( $dk1, $i, 1 ) eq substr( $dk2, $i, 1 ) ) ? 1 : 0;
     }
 
     return $match;

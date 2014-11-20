@@ -2,6 +2,11 @@ Revision history for PBKDF2-Tiny
 
 {{$NEXT}}
 
+    [FIXED]
+
+    - fixed verification bug if derived key length was not passed to
+      verify/verify_hex
+
 0.004     2014-10-06 11:18:07-04:00 America/New_York
 
     [CHANGED]

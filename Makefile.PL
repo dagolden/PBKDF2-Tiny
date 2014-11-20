@@ -43,11 +43,13 @@ my %WriteMakefileArgs = (
 
 my %FallbackPrereqs = (
   "Carp" => 0,
+  "Config" => 0,
   "Encode" => 0,
   "Exporter" => "5.57",
-  "ExtUtils::MakeMaker" => 0,
+  "ExtUtils::MakeMaker" => "6.17",
   "File::Spec" => 0,
   "Test::More" => "0.88",
+  "Text::ParseWords" => 0,
   "strict" => 0,
   "utf8" => 0,
   "warnings" => 0
